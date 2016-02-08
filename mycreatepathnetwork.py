@@ -23,6 +23,115 @@ from constants import *
 from utils import *
 from core import *
 
+def mergeTriangles(ManualObstacleList):
+	# Merge Triangles
+	merged = [] # mark merged polygons
+	visited = [] # mark comparisonObj that we dont want to remerge 			
+	for manualObj in ManualObstacleList:
+		for comparisonObj in ManualObstacleList:
+			newPolygon = []
+			if (manualObj != comparisonObj) and (comparisonObj not in visited) and (manualObj not in visited): # 1. cannot be same object and cannot be visited
+				mindex=0
+				cindex=0
+				shareLineClockwise = False
+				shareLineCounterclock = False
+				for line in manualObj.getLines():
+					counterline = (line[1], line[0])
+					if line in comparisonObj.getLines(): # 2. share a same line in same counterclockwise order
+						#print str(line) + " :matchyoo: " + str(comparisonObj.getLines())
+						shareLineCounterclock = True
+						shareLineClockwise = False
+						cindex = comparisonObj.getLines().index(line) # where does the manualObj line exist in the comparisonObj
+					elif counterline in comparisonObj.getLines(): # 3. share a same line in clockwise order
+						print str(line) + " :matchpoo: " + str(comparisonObj.getLines())
+						shareLineCounterclock = False
+						shareLineClockwise = True
+						cindex = comparisonObj.getLines().index(counterline) # where does the manualObj counterline exist in the comparisonObj
+
+					if shareLineClockwise or shareLineCounterclock:
+						break
+					else:
+						mindex+=1
+						continue
+				# merge polygons clockwise or counterclockwise
+				if shareLineClockwise:
+					manualIndex=0
+					print "mindex " + str(mindex)
+					for manualPoint in manualObj.getPoints():
+						if manualIndex != mindex:
+							newPolygon.append(manualObj.getPoints()[manualIndex])
+							print "whelpxx" + str(manualObj.getPoints()[manualIndex])
+						elif manualIndex >= len(manualObj.getPoints()):
+							break
+						else:
+							if cindex == len(comparisonObj.getPoints()) -1:
+								counter = 0
+								print "whelp"
+								while counter < len(comparisonObj.getPoints()) -1:
+									print "whelp" + str(comparisonObj.getPoints()[counter])
+									newPolygon.append(comparisonObj.getPoints()[counter])
+									counter+=1
+							else:
+								counter = cindex +1 # finish in increasing order
+								while counter < len(comparisonObj.getPoints()):
+									newPolygon.append(comparisonObj.getPoints()[counter])
+									counter+=1
+								counter = 0 # finish in increase order
+								while counter < cindex -1:
+									#print "boo"
+									newPolygon.append(comparisonObj.getPoints()[counter])
+									counter+=1
+						manualIndex+=1
+				elif shareLineCounterclock:
+					manualIndex=0
+					for manualPoint in manualObj.getPoints():
+						if manualIndex != mindex:
+							newPolygon.append(manualObj.getPoints()[manualIndex])
+						elif manualIndex >= len(manualObj.getPoints()):
+							break
+						else:
+							if cindex == len(comparisonObj.getPoints()) -1:
+								#print "here"
+								counter = cindex
+								while counter > 0:
+									newPolygon.append(comparisonObj.getPoints()[counter])
+									counter-=1
+							else:
+								counter = cindex # finish in decreasing order
+								while counter >=  0:
+									#print "poo"
+									newPolygon.append(comparisonObj.getPoints()[counter])
+									counter-=1
+								counter =  len(comparisonObj.getPoints()) - 1# finish in decreasing order
+								while counter > cindex +1 :
+									#print "issue"
+									newPolygon.append(comparisonObj.getPoints()[counter])
+									counter-=1
+						manualIndex+=1
+				# if newPoly is not an empty list, check convexity 
+				if (len(newPolygon) >0) and isConvex(newPolygon):
+					#print isConvex(newPolygon)
+					#print "obj points: " + str(manualObj.getPoints())
+					#print "comp points: " + str(comparisonObj.getPoints())
+					print "final POLY: " + str(newPolygon)
+					newP = ManualObstacle(tuple(newPolygon))
+					print "final POLY Lines: " + str(newP.getLines())
+					merged.append(newP)
+					visited.append(manualObj)
+					visited.append(comparisonObj)
+					break
+
+	# remove visited polys and add merged polys to the final list 
+	mergeOccured = False
+	for visit in visited:
+		#print "visited points"
+		#print visit.getPoints()
+		ManualObstacleList.remove(visit)
+	if len(merged) >0:
+		mergeOccured = True
+	ManualObstacleList.extend(merged)
+
+	return mergeOccured, ManualObstacleList
 # Creates a pathnode network that connects the midpoints of each navmesh together
 def myCreatePathNetwork(world, agent = None):
 	nodes = []
@@ -132,112 +241,21 @@ def myCreatePathNetwork(world, agent = None):
 				edge2 = (triPoint2,triPoint3)
 				#appendLineNoDuplicates(edge2,edges)
 				appendLineNoDuplicates(edge2,obstructionLines)
-				edge3 = (triPoint1,triPoint3)
+				edge3 = (triPoint3,triPoint1)
 				#appendLineNoDuplicates(edge3,edges)
 				appendLineNoDuplicates(edge3,obstructionLines)
 				
 				(ManualObstacleList).append(o)
 
-	# Merge Triangles
-	merged = [] # mark merged polygons
-	visited = [] # mark comparisonObj that we dont want to remerge 			
-	for manualObj in ManualObstacleList:
-		for comparisonObj in ManualObstacleList:
-			newPolygon = []
-			if (manualObj != comparisonObj) and (comparisonObj not in visited) and (manualObj not in visited): # 1. cannot be same object and cannot be visited
-				mindex=0
-				cindex=0
-				shareLineClockwise = False
-				shareLineCounterclock = False
-				for line in manualObj.getLines():
-					counterline = (line[1], line[0])
-					if line in comparisonObj.getLines(): # 2. share a same line in same counterclockwise order
-						print str(line) + " :matchyoo: " + str(comparisonObj.getLines())
-						shareLineCounterclock = True
-						shareLineClockwise = False
-						cindex = comparisonObj.getLines().index(line) # where does the manualObj line exist in the comparisonObj
-					# elif counterline in comparisonObj.getLines(): # 3. share a same line in clockwise order
-					# 	print str(line) + " :matchpoo: " + str(comparisonObj.getLines())
-					# 	shareLineCounterclock = False
-					# 	shareLineClockwise = True
-					# 	cindex = comparisonObj.getLines().index(counterline) # where does the manualObj counterline exist in the comparisonObj
+	
+	keepMerge = True
+	newList = ManualObstacleList
+	while keepMerge == True:
+		returnVal = mergeTriangles(newList)
+		keepMerge = returnVal[0]
+		newList = returnVal[1]
 
-					if shareLineClockwise or shareLineCounterclock:
-						break
-					else:
-						mindex+=1
-						continue
-				# merge polygons clockwise or counterclockwise
-				if shareLineClockwise:
-					manualIndex=0
-					for manualPoint in manualObj.getPoints():
-						if manualIndex != mindex:
-							newPolygon.append(manualObj.getPoints()[manualIndex])
-						elif manualIndex >= len(manualObj.getPoints()):
-							break
-						else:
-							if cindex == len(comparisonObj.getPoints()) -1:
-								counter = 0
-								while counter < len(comparisonObj.getPoints()):
-									newPolygon.append(comparisonObj.getPoints()[counter])
-									counter+=1
-							else:
-								counter = cindex +1 # finish in increasing order
-								while counter < len(comparisonObj.getPoints()):
-									newPolygon.append(comparisonObj.getPoints()[counter])
-									counter+=1
-								counter = 0 # finish in increase order
-								while counter < cindex -1:
-									print "boo"
-									newPolygon.append(comparisonObj.getPoints()[counter])
-									counter+=1
-						manualIndex+=1
-				elif shareLineCounterclock:
-					manualIndex=0
-					for manualPoint in manualObj.getPoints():
-						if manualIndex != mindex:
-							newPolygon.append(manualObj.getPoints()[manualIndex])
-						elif manualIndex >= len(manualObj.getPoints()):
-							break
-						else:
-							if cindex == len(comparisonObj.getPoints()) -1:
-								print "here"
-								counter = cindex
-								while counter > 0:
-									newPolygon.append(comparisonObj.getPoints()[counter])
-									counter-=1
-							else:
-								counter = cindex # finish in decreasing order
-								while counter >=  0:
-									print "poo"
-									newPolygon.append(comparisonObj.getPoints()[counter])
-									counter-=1
-								counter =  len(comparisonObj.getPoints()) - 1# finish in decreasing order
-								while counter > cindex +1 :
-									print "issue"
-									newPolygon.append(comparisonObj.getPoints()[counter])
-									counter-=1
-						manualIndex+=1
-				# if newPoly is not an empty list, check convexity 
-				if (len(newPolygon) >0) and isConvex(newPolygon):
-					print isConvex(newPolygon)
-					print "obj points: " + str(manualObj.getPoints())
-					print "comp points: " + str(comparisonObj.getPoints())
-					print "final POLY: " + str(newPolygon)
-					newP = ManualObstacle(tuple(newPolygon))
-					merged.append(newP)
-					visited.append(manualObj)
-					visited.append(comparisonObj)
-					break
-
-	# remove visited polys and add merged polys to the final list 
-	for visit in visited:
-		#print "visited points"
-		#print visit.getPoints()
-		ManualObstacleList.remove(visit)
-	ManualObstacleList.extend(merged)
-
-	for obs in ManualObstacleList:
+	for obs in newList:
 		polys.append(obs.getPoints())
 	#polys.extend(ManualObstacleList)
 	# Place Waypoints
