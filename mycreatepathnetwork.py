@@ -132,7 +132,7 @@ def myCreatePathNetwork(world, agent = None):
 				edge2 = (triPoint2,triPoint3)
 				#appendLineNoDuplicates(edge2,edges)
 				appendLineNoDuplicates(edge2,obstructionLines)
-				edge3 = (triPoint3,triPoint1)
+				edge3 = (triPoint1,triPoint3)
 				#appendLineNoDuplicates(edge3,edges)
 				appendLineNoDuplicates(edge3,obstructionLines)
 				
@@ -152,18 +152,21 @@ def myCreatePathNetwork(world, agent = None):
 				for line in manualObj.getLines():
 					counterline = (line[1], line[0])
 					if line in comparisonObj.getLines(): # 2. share a same line in same counterclockwise order
-						print line
+						print str(line) + " :matchyoo: " + str(comparisonObj.getLines())
 						shareLineCounterclock = True
 						shareLineClockwise = False
 						cindex = comparisonObj.getLines().index(line) # where does the manualObj line exist in the comparisonObj
+					# elif counterline in comparisonObj.getLines(): # 3. share a same line in clockwise order
+					# 	print str(line) + " :matchpoo: " + str(comparisonObj.getLines())
+					# 	shareLineCounterclock = False
+					# 	shareLineClockwise = True
+					# 	cindex = comparisonObj.getLines().index(counterline) # where does the manualObj counterline exist in the comparisonObj
+
+					if shareLineClockwise or shareLineCounterclock:
 						break
-					elif counterline in comparisonObj.getLines(): # 3. share a same line in clockwise order
-						print line
-						shareLineCounterclock = False
-						shareLineClockwise = True
-						cindex = comparisonObj.getLines().index(counterline) # where does the manualObj counterline exist in the comparisonObj
-						break
-					mindex+=1
+					else:
+						mindex+=1
+						continue
 				# merge polygons clockwise or counterclockwise
 				if shareLineClockwise:
 					manualIndex=0
@@ -197,29 +200,30 @@ def myCreatePathNetwork(world, agent = None):
 						elif manualIndex >= len(manualObj.getPoints()):
 							break
 						else:
-							# if cindex == 0:
-							# 	counter =  len(comparisonObj.getPoints()) -1
-							# 	while counter >  0:
-							# 		newPolygon.append(comparisonObj.getPoints()[counter])
-							# 		counter-=1
-							# else:
-							counter = cindex # finish in decreasing order
-							while counter >=  0:
-								newPolygon.append(comparisonObj.getPoints()[counter])
-								counter-=1
-							counter =  len(comparisonObj.getPoints()) - 1# finish in decreasing order
-							while counter > cindex +1 :
-								newPolygon.append(comparisonObj.getPoints()[counter])
-								counter-=1
+							if cindex == len(comparisonObj.getPoints()) -1:
+								print "here"
+								counter = cindex
+								while counter > 0:
+									newPolygon.append(comparisonObj.getPoints()[counter])
+									counter-=1
+							else:
+								counter = cindex # finish in decreasing order
+								while counter >=  0:
+									print "poo"
+									newPolygon.append(comparisonObj.getPoints()[counter])
+									counter-=1
+								counter =  len(comparisonObj.getPoints()) - 1# finish in decreasing order
+								while counter > cindex +1 :
+									print "issue"
+									newPolygon.append(comparisonObj.getPoints()[counter])
+									counter-=1
 						manualIndex+=1
 				# if newPoly is not an empty list, check convexity 
 				if (len(newPolygon) >0) and isConvex(newPolygon):
 					print isConvex(newPolygon)
-					print "obj points "
-					print manualObj.getPoints()
-					print "comp points "
-					print comparisonObj.getPoints()
-					print newPolygon
+					print "obj points: " + str(manualObj.getPoints())
+					print "comp points: " + str(comparisonObj.getPoints())
+					print "final POLY: " + str(newPolygon)
 					newP = ManualObstacle(tuple(newPolygon))
 					merged.append(newP)
 					visited.append(manualObj)
