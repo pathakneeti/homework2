@@ -23,6 +23,32 @@ from constants import *
 from utils import *
 from core import *
 
+# Creates the pathnetwork as a list of lines between all pathnodes that are traversable by the agent.
+def myBuildPathNetwork(pathnodes, world):
+	lines = []
+	nodes = []
+	radius= world.getAgent().getRadius()
+	for pointStart in pathnodes:
+		match = False
+		for pointEnd in pathnodes:
+			if pointStart != pointEnd and rayTraceWorld(pointStart,pointEnd, world.getLinesWithoutBorders()) == None:
+				if(pointStart[1] > pointEnd[1]):
+					pSleft = (pointStart[0] - radius*1.5, pointStart[1] + radius*1.5)
+					pSright = (pointStart[0] + radius*1.5, pointStart[1] + radius*1.5)
+					pEleft = (pointEnd[0] - radius*1.5, pointEnd[1] - radius*1.5)
+					pEright = (pointEnd[0] + radius*1.5, pointEnd[1] - radius*1.5)
+				else:
+					pSleft = (pointStart[0] - radius*1.5, pointStart[1] - radius*1.5)
+					pSright = (pointStart[0] + radius*1.5, pointStart[1] - radius*1.5)
+					pEleft = (pointEnd[0] - radius*1.5, pointEnd[1] + radius*1.5)
+					pEright = (pointEnd[0] + radius*1.5, pointEnd[1] + radius*1.5)
+				if rayTraceWorld(pSleft,pEleft, world.getLinesWithoutBorders()) == None and rayTraceWorld(pSleft,pEright, world.getLinesWithoutBorders()) == None and rayTraceWorld(pSright,pEleft, world.getLinesWithoutBorders()) == None and rayTraceWorld(pSright,pEright, world.getLinesWithoutBorders()) == None:
+					match = True
+					tempLine = (pointStart,pointEnd)
+					appendLineNoDuplicates(tempLine,lines)
+		if match:
+			nodes.append(pointStart)
+	return nodes,lines
 def mergeTriangles(ManualObstacleList):
 	# Merge Triangles
 	merged = [] # mark merged polygons
@@ -38,12 +64,10 @@ def mergeTriangles(ManualObstacleList):
 				for line in manualObj.getLines():
 					counterline = (line[1], line[0])
 					if line in comparisonObj.getLines(): # 2. share a same line in same counterclockwise order
-						#print str(line) + " :matchyoo: " + str(comparisonObj.getLines())
 						shareLineCounterclock = True
 						shareLineClockwise = False
 						cindex = comparisonObj.getLines().index(line) # where does the manualObj line exist in the comparisonObj
 					elif counterline in comparisonObj.getLines(): # 3. share a same line in clockwise order
-						print str(line) + " :matchpoo: " + str(comparisonObj.getLines())
 						shareLineCounterclock = False
 						shareLineClockwise = True
 						cindex = comparisonObj.getLines().index(counterline) # where does the manualObj counterline exist in the comparisonObj
@@ -56,19 +80,15 @@ def mergeTriangles(ManualObstacleList):
 				# merge polygons clockwise or counterclockwise
 				if shareLineClockwise:
 					manualIndex=0
-					print "mindex " + str(mindex)
 					for manualPoint in manualObj.getPoints():
 						if manualIndex != mindex:
 							newPolygon.append(manualObj.getPoints()[manualIndex])
-							print "whelpxx" + str(manualObj.getPoints()[manualIndex])
 						elif manualIndex >= len(manualObj.getPoints()):
 							break
 						else:
 							if cindex == len(comparisonObj.getPoints()) -1:
 								counter = 0
-								print "whelp"
 								while counter < len(comparisonObj.getPoints()) -1:
-									print "whelp" + str(comparisonObj.getPoints()[counter])
 									newPolygon.append(comparisonObj.getPoints()[counter])
 									counter+=1
 							else:
@@ -78,7 +98,6 @@ def mergeTriangles(ManualObstacleList):
 									counter+=1
 								counter = 0 # finish in increase order
 								while counter < cindex -1:
-									#print "boo"
 									newPolygon.append(comparisonObj.getPoints()[counter])
 									counter+=1
 						manualIndex+=1
@@ -91,7 +110,6 @@ def mergeTriangles(ManualObstacleList):
 							break
 						else:
 							if cindex == len(comparisonObj.getPoints()) -1:
-								#print "here"
 								counter = cindex
 								while counter > 0:
 									newPolygon.append(comparisonObj.getPoints()[counter])
@@ -99,20 +117,15 @@ def mergeTriangles(ManualObstacleList):
 							else:
 								counter = cindex # finish in decreasing order
 								while counter >=  0:
-									#print "poo"
 									newPolygon.append(comparisonObj.getPoints()[counter])
 									counter-=1
 								counter =  len(comparisonObj.getPoints()) - 1# finish in decreasing order
 								while counter > cindex +1 :
-									#print "issue"
 									newPolygon.append(comparisonObj.getPoints()[counter])
 									counter-=1
 						manualIndex+=1
 				# if newPoly is not an empty list, check convexity 
 				if (len(newPolygon) >0) and isConvex(newPolygon):
-					#print isConvex(newPolygon)
-					#print "obj points: " + str(manualObj.getPoints())
-					#print "comp points: " + str(comparisonObj.getPoints())
 					print "final POLY: " + str(newPolygon)
 					newP = ManualObstacle(tuple(newPolygon))
 					print "final POLY Lines: " + str(newP.getLines())
@@ -124,8 +137,6 @@ def mergeTriangles(ManualObstacleList):
 	# remove visited polys and add merged polys to the final list 
 	mergeOccured = False
 	for visit in visited:
-		#print "visited points"
-		#print visit.getPoints()
 		ManualObstacleList.remove(visit)
 	if len(merged) >0:
 		mergeOccured = True
@@ -140,11 +151,6 @@ def myCreatePathNetwork(world, agent = None):
 	### YOUR CODE GOES BELOW HERE ###
 	obstructionLines = world.getLines()
 	anchorpoints = world.getPoints()
-	# firstPoints = world.getPoints()
-	# firstPoints.remove((0, 0))
-	# firstPoints.remove((world.getDimensions()[0], 0))
-	# firstPoints.remove((world.getDimensions()[0], world.getDimensions()[1]))
-	# firstPoints.remove((0, world.getDimensions()[1]))
 	ManualObstacleList = []
 
 	for triPoint1 in anchorpoints:
@@ -167,8 +173,10 @@ def myCreatePathNetwork(world, agent = None):
 				pass
 			elif hit12 == None and inside12 == True: # 3. cannot by inside a polygon or triangle
 				continue 
-			else:
+			elif hit12 != None and not ((obstructionLines.count(templine1) >0) or (obstructionLines.count(templine2) >0)):
 				continue
+			#else:
+			#	continue
 
 			for triPoint3 in anchorpoints:
 				#check midpoint
@@ -196,7 +204,7 @@ def myCreatePathNetwork(world, agent = None):
 
 				if triPoint1 == triPoint3 or triPoint2 == triPoint3: # 1. cannot be another point 
 					continue
-				elif (hit13 != None and (obstructionLines.count(templine13)==0 and obstructionLines.count(templine31)==0)) or (hit23 != None and (obstructionLines.count(templine23)==0 and obstructionLines.count(templine32)==0)):
+				elif (hit13 != None and not (obstructionLines.count(templine13)>0 or obstructionLines.count(templine31)>0)) or (hit23 != None and not (obstructionLines.count(templine23)>0 or obstructionLines.count(templine32)>0)):
 					continue # 7. either collides and not obsline
 				elif (hit13== None and inside13 == True ) or (hit23 == None and inside23 == True ):
 					continue #and (obstructionLines.count(templine13)==0 and obstructionLines.count(templine31)==0) and (obstructionLines.count(templine23)==0 and obstructionLines.count(templine32)==0)
@@ -236,30 +244,52 @@ def myCreatePathNetwork(world, agent = None):
 
 
 				edge1 = (triPoint1,triPoint2)
-				#appendLineNoDuplicates(edge1,edges)
 				appendLineNoDuplicates(edge1,obstructionLines)
 				edge2 = (triPoint2,triPoint3)
-				#appendLineNoDuplicates(edge2,edges)
 				appendLineNoDuplicates(edge2,obstructionLines)
 				edge3 = (triPoint3,triPoint1)
-				#appendLineNoDuplicates(edge3,edges)
 				appendLineNoDuplicates(edge3,obstructionLines)
 				
 				(ManualObstacleList).append(o)
 
 	
 	keepMerge = True
-	newList = ManualObstacleList
+	polyList = ManualObstacleList
 	while keepMerge == True:
-		returnVal = mergeTriangles(newList)
+		returnVal = mergeTriangles(polyList)
 		keepMerge = returnVal[0]
-		newList = returnVal[1]
+		polyList = returnVal[1]
 
-	for obs in newList:
+	for obs in polyList:
 		polys.append(obs.getPoints())
-	#polys.extend(ManualObstacleList)
+	
 	# Place Waypoints
 
+	# for every line in the polygons, if it is not an obstruction (obstacle or border) temp place waypoint
+	allPolyLines = []
+	for poly in polyList:
+		allPolyLines.extend(poly.getLines())
+	tempnodes = []
+	obstructionLines = world.getLinesWithoutBorders()
+	for poly in polyList:
+		for line in poly.getLines():
+			counterline = (line[1],line[0])
+			if line not in obstructionLines and counterline not in obstructionLines and (allPolyLines.count(line) + allPolyLines.count(counterline) > 1):
+				midpoint = ((line[0][0]+line[1][0])/2, (line[0][1]+line[1][1])/2)
+				tempnodes.append(midpoint) 
+		#compute the centroid
+		sumX =0
+		sumY=0
+		for point in poly.getPoints():
+			sumX+= point[0]
+			sumY+= point[1]
+		centroid = ((sumX/len(poly.getPoints())),(sumY/len(poly.getPoints())))
+		tempnodes.append(centroid)
+
+	# make an edge of a waypoint can reach another waypoint 
+	nodesEdges = myBuildPathNetwork(tempnodes,world)
+	edges.extend(nodesEdges[1]) 
+	nodes.extend(nodesEdges[0])
 	# Form Path Newtwork
 	### YOUR CODE GOES ABOVE HERE ###
 	return nodes, edges, polys
