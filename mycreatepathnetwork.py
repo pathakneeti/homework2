@@ -97,7 +97,7 @@ def mergeTriangles(ManualObstacleList):
 									newPolygon.append(comparisonObj.getPoints()[counter])
 									counter+=1
 								counter = 0 # finish in increase order
-								while counter < cindex -1:
+								while counter < cindex: #-1
 									newPolygon.append(comparisonObj.getPoints()[counter])
 									counter+=1
 						manualIndex+=1
@@ -126,9 +126,7 @@ def mergeTriangles(ManualObstacleList):
 						manualIndex+=1
 				# if newPoly is not an empty list, check convexity 
 				if (len(newPolygon) >0) and isConvex(newPolygon):
-					print "final POLY: " + str(newPolygon)
 					newP = ManualObstacle(tuple(newPolygon))
-					print "final POLY Lines: " + str(newP.getLines())
 					merged.append(newP)
 					visited.append(manualObj)
 					visited.append(comparisonObj)
